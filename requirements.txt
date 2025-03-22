@@ -1,0 +1,10 @@
+# for flask 
+# flask
+# requests
+
+# for fastapi 
+fastapi 
+uvicorn 
+jinja2 
+pyngrok 
+requests

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Zendesk Chatbot</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <h2>Zendesk Chatbot <button id="human-handover" onclick="requestHuman()">Talk to Agent</button></h2>
+        <div id="chat-box">
+            <p><strong>Bot:</strong> Hi! Say 'hi' to start or ask for help.</p>
+        </div>
+        <div class="input-row">
+            <input type="text" id="user-input" placeholder="Type here (e.g., 'hi' or 'help')">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <p id="status" style="font-size: 12px; color: #666;"></p>
+    </div>
+
+    <script>
+        // Get current time for message timestamps
+        function getTimestamp() {
+            return new Date().toLocaleTimeString();
+        }
+
+        // Dynamically determine WebSocket URL based on current host
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/stream`;
+        console.log("Connecting to WebSocket at:", wsUrl); // Debug WebSocket URL
+
+        // WebSocket setup
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+            console.log("WebSocket connection opened");
+            document.getElementById('status').innerText = 'Connected to chat.';
+        };
+
+        ws.onmessage = function(event) {
+            console.log("Received WebSocket message:", event.data); // Debug incoming message
+            const data = JSON.parse(event.data);
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p class="agent-message"><strong>${data.response}</strong> <span class="timestamp">${getTimestamp()}</span></p>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            document.getElementById('status').innerText = 'Connected to agent.';
+        };
+
+        ws.onerror = function(error) {
+            console.error("WebSocket error:", error);
+            document.getElementById('status').innerText = 'Disconnected. Reconnecting...';
+        };
+
+        ws.onclose = function() {
+            console.log("WebSocket connection closed");
+            document.getElementById('status').innerText = 'Disconnected. Attempting to reconnect...';
+            // Attempt to reconnect after a delay
+            setTimeout(() => {
+                window.location.reload(); // Reload page to re-establish connection
+            }, 2000);
+        };
+
+        // Send user message to server
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>You:</strong> ${message} <span class="timestamp">${getTimestamp()}</span></p>`;
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.innerHTML += `<p><strong>Bot:</strong> ${data.response} <span class="timestamp">${getTimestamp()}</span></p>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('status').innerText = 'Error sending message.';
+            });
+
+            input.value = '';
+        }
+
+        // Request human agent
+        function requestHuman() {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>You:</strong> Requested human agent <span class="timestamp">${getTimestamp()}</span></p>`;
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: 'human_handover' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatBox.innerHTML += `<p><strong>Bot:</strong> ${data.response} <span class="timestamp">${getTimestamp()}</span></p>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('status').innerText = 'Error requesting agent.';
+            });
+        }
+
+        // Send message on Enter key
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
