@@ -44,6 +44,9 @@ An intelligent customer support chatbot that integrates seamlessly with Zendesk.
 3. Responses broadcast to connected WebSocket clients
 4. Real-time conversation between user and agent
 
+### Work Flow
+<img width="242" height="236" alt="image" src="https://github.com/user-attachments/assets/671253c8-bcba-4b70-a207-7bea3b6d2e99" />
+
 ## Installation
 
 ```bash
